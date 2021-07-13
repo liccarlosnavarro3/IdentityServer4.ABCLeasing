@@ -1,0 +1,96 @@
+﻿@model ABCLeasing.CRUD.ClientesABC
+
+@{
+    ViewBag.Title = "Details";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2>Detalles</h2>
+
+<div>
+    <h4>Clientes ABC</h4>
+    <hr />
+    <dl class="dl-horizontal">
+        @*<dt>
+            @Html.DisplayNameFor(model => model.token)
+        </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.token)
+        </dd>*@
+
+        @*<dt>
+            @Html.DisplayNameFor(model => model.device_type)
+        </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.device_type)
+        </dd>*@
+
+        <dt>
+            @*@Html.DisplayNameFor(model => model.updated_at)*@
+            <label class="control-label">Fecha Actualización</label>
+        </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.updated_at)
+        </dd>
+
+        <dt>
+            @*@Html.DisplayNameFor(model => model.created_at)*@
+            <label class="control-label">Fecha Creación</label>
+        </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.created_at)
+        </dd>
+
+        <dt>
+            @*@Html.DisplayNameFor(model => model.no_cliente)*@
+            <label class="control-label">Número Cliente</label>
+        </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.no_cliente)
+        </dd>
+
+        <dt>
+            @*@Html.DisplayNameFor(model => model.RFC)*@
+            <label class="control-label">RFC</label>
+        </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.RFC)
+        </dd>
+
+        <dt>
+            @*@Html.DisplayNameFor(model => model.password)*@
+            <label class="control-label">Contraseña</label>
+        </dt>
+
+        @{
+            AES aES = new AES();
+
+            string PassEncrypt = @Html.ValueFor(model => model.password).ToString();
+            string PassDecrypt = aES.OpenSSLDecrypt(PassEncrypt);
+        }
+        <dd>
+            @*@PassDecrypt*@
+            @Html.DisplayFor(model => model.password)
+        </dd>
+
+        <dt>
+            @*@Html.DisplayNameFor(model => model.nombre)*@
+            <label class="control-label">Nombre</label>
+        </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.nombre)
+        </dd>
+
+    </dl>
+</div>
+<p>
+    @Html.ActionLink("Cambiar Contraseña", "Edit", new { id = Model.user_id }) |
+    @Html.ActionLink("Regresar a la Lista", "Index")
+</p>

@@ -1,0 +1,186 @@
+﻿
+@{
+    ViewData["Title"] = "Registrar Cliente ABC Leasing";
+}
+
+<div>
+    <br />
+    <h5>Buscar Cliente</h5>
+    @using (Html.BeginForm("FindRFC", "Home", FormMethod.Get))
+    {
+        <div class="form-group col-md-6">
+            <label for="RFC">Ingrese su RFC</label>
+            <input type="text" class="form-control" id="RFC" name="RFC" placeholder="RFC del Cliente" value="@ViewBag.RFC" pattern="[A-ZÑ&]{3,4}\d{6}[A-V1-9][A-Z1-9][0-9A]" title="El formato de RFC no parece válido" maxlength="50" required>
+        </div>
+        <button type="submit" class="btn btn-success col-md-2 boton">Validar</button>
+
+    }
+</div>
+<!--
+    Creado = 0 Then Estatus Inicial No Hace nada
+    Creado = 1 Then RFC No Existe
+    Creado = 2 Then RFC Existe Pero no se ha registrado
+    Creado = 3 Then RFC Existe y está registrado
+-->
+<input type="hidden" id="Creado" value="@ViewBag.Creado" />
+<br />
+
+<div id="VerifyUser" class="collapse show">
+    <h5>Para comprobar su identidad favor de responder a las siguientes preguntas:</h5>
+    Todos los campos son requeridos
+    <form action="/Home/VerifyUser" method="Post">
+        <input type="hidden" id="RFC" name="RFC" value="@ViewBag.RFC" />
+        <input type="hidden" id="Intento" name="Intento" value="@ViewBag.Intento" />
+
+        <div class="form-group col-md-6">
+            <label for="RFC">1.- Ingrese un contrato que tenga en arrendamiento con ABC Leasing:</label>
+            <input type="text" class="form-control" id="Contrato" name="Contrato" placeholder="Ingrese alguno de sus contratos" value="@ViewBag.Contrato" maxlength="10"  required>
+        </div>
+        <div class="form-group col-md-6">
+            <label for="Telefono">2.- Ingrese un número de teléfono registrado con ABC Leasing:</label>
+            <input type="tel" class="form-control" id="Telefono" name="Telefono" placeholder="Ingrese un número telefónico registrado" pattern="[0-9]{8,10}" title="El formato del número telefónico no parece válido" value="@ViewBag.Telefono">
+        </div>
+        <div class="form-group col-md-6">
+            <label for="Email">3.- Ingrese el correo electrónico registrado con ABC Leasing:</label>
+            <input type="email" class="form-control" id="Email" name="Email" placeholder="Ingrese su correo electrónico registrado" value="@ViewBag.Email" required>
+        </div>
+        <button type="submit" class="btn btn-success col-md-2 boton">Enviar Respuestas</button>
+    </form>
+</div>
+<!--
+    Verificado = 0 Then Estatus Inicial No Hace nada
+    Verificado = 1 Then No Coinciden los datos
+    Verificado = 2 Then Mas de tres intentos
+    Verificado = 3 Then Puede avanzar proceso de registro
+-->
+<input type="hidden" id="Encontrado" value="@ViewBag.Verificado" />
+<br />
+
+<div id="SavePass" class="collapse show">
+    <!--<h5>Datos de Registro</h5>-->
+    <form action="/Home/SavePass" method="Post" oninput="RePass.setCustomValidity(RePass.value != Pass.value ? 'La contraseña no coincide.' : '')">
+        <!--<div class="form-group col-md-6">
+            <label for="Email">Correo Electrónico</label>
+            <input type="email" class="form-control" id="Email" name="Email" aria-describedby="EmailHelp" placeholder="Ingrese su correo electrónico">
+        </div>-->
+        <input type="hidden" id="RFC" name="RFC" value="@ViewBag.RFC" />
+        <input type="hidden" id="Email" name="Email" value="@ViewBag.Email" />
+
+        <div class="form-group col-md-6">
+            <label for="Pass">Ingrese su nueva contraseña</label>
+            <input type="password" class="form-control" id="Pass" name="Pass" placeholder="Ingrese su Contraseña" pattern=".{6,}" title="La contraseña debe tener al menos seis caracteres" required>
+        </div>
+        <div class="form-group col-md-6">
+            <label for="RePass">Ingrese nuevamente su contraseña</label>
+            <input type="password" class="form-control" id="RePass" name="RePass" placeholder="Ingrese nuevamente su Contraseña" required>
+        </div>
+        <div class="form-check col-md-6">
+            <input class="form-check-input" type="checkbox" id="AceptarPrivacidad" name="AceptarPrivacidad" required>
+            <label class="form-check-label" for="AceptarPrivacidad">
+                He leído y acepto la <a href="https://www.abcleasing.com.mx/wp/wp-content/uploads/2019/03/AVISO-DE-PRIVACIDAD-1.pdf" target="_blank">Política de Privacidad</a>
+            </label>
+        </div>
+        <br />
+        <button type="submit" class="btn btn-success col-md-2 boton">Actualizar Contraseña</button>
+    </form>
+</div>
+
+<!-- Modal Multiproposito -->
+<div class="modal fade" id="MutliModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Error General</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p id="modalContent1">Error al intentar procesar su solicitud.</p>
+                <p id="modalContent2">Intentelo de nuevo más tarde.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary  col-md-2" data-dismiss="modal">Cerrar</button>
+                <!--<button type="button" class="btn btn-primary">Save changes</button>-->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script>
+    $(document).ready(function () {
+        var MostrarVerify = document.getElementById('Creado').value;
+        var MostrarPass = document.getElementById('Encontrado').value;
+
+        if (MostrarVerify == 0) {
+            //Creado = 0 -> Estatus Inicial: Oculta todo
+            $("#VerifyUser").collapse('hide');
+            $('#MutliModal').modal('hide');
+            $("#SavePass").collapse('hide');
+        } else if (MostrarVerify == 1) {
+            //Creado = 1 -> RFC No Existe
+            $("#VerifyUser").collapse('hide');
+            $("#modalTitle").html('RFC No Encontrado');
+            $("#modalContent1").html('El RFC que ha ingresado no existe');
+            $("#modalContent2").html('Favor de confirmalo');
+            $('#MutliModal').modal('show');
+            $("#SavePass").collapse('hide');
+        } else if (MostrarVerify == 2) {
+            //Creado = 2 -> RFC Existe y no se ha registrado: puede continuar
+            $("#VerifyUser").collapse('show');
+
+            if (MostrarPass == 0) {
+                //Creado = 0 -> Estatus Inicial: Oculta todo
+                $('#MutliModal').modal('hide');
+                $("#SavePass").collapse('hide');
+            } else if (MostrarPass == 1) {
+                //Verificado = 1 -> No Coinciden los datos
+                $("#modalTitle").html('No coinciden los datos');
+                $("#modalContent1").html('Los datos ingresados no coinciden con el RFC');
+                $("#modalContent2").html('Favor de confirmalos');
+                $('#MutliModal').modal('show');
+                $("#SavePass").collapse('hide');
+            } else if (MostrarPass == 2) {
+                //Verificado = 2 -> Mas de tres intentos
+                $("#modalTitle").html('No coinciden los datos');
+                $("#modalContent1").html('Los datos ingresados no coinciden con el RFC');
+                $("#modalContent2").html('Favor de comunicarse a Atención A Clientes');
+                $('#MutliModal').modal('show');
+                $("#SavePass").collapse('hide');
+            } else if (MostrarPass == 3) {
+                //Verificado = 3 -> Puede avanzar
+                $('#MutliModal').modal('hide');
+                $("#SavePass").collapse('show');
+            } else if (MostrarPass == 4) {
+                //Verificado = 4 -> Contraseña no coincide
+                $("#modalTitle").html('Error al guardar el usuario');
+                $("#modalContent1").html('Las contraseñas no coinciden');
+                $("#modalContent2").html('Favor de intentarlo de nuevo');
+                $('#MutliModal').modal('show');
+                $("#SavePass").collapse('hide');
+            }
+        } else if (MostrarVerify == 3) {
+            //Creado = 3 -> RFC Existe y está registrado
+            $("#VerifyUser").collapse('hide');
+            $("#modalTitle").html('Usuario ya existe');
+            $("#modalContent1").html('El RFC ingresado ya está registrado');
+            $("#modalContent2").html('Si no recuerda su contraseña comuníquese a Atención A Clientes');
+            $('#MutliModal').modal('show');
+            $("#SavePass").collapse('hide');
+        } else if (MostrarVerify == 4) {
+            //Creado = 4 -> Proceso finalizado exitosamente
+            $("#VerifyUser").collapse('hide');
+            $("#modalTitle").html('Cliente Registrado Correctamente');
+            $("#modalContent1").html('El usuario se ha actualizado correctamente');
+            $("#modalContent2").html('Ingrese ahora a ABC Pocket');
+            $('#MutliModal').modal('show');
+            $("#SavePass").collapse('hide');
+        } else {
+            // Sino oculta todo
+            $("#VerifyUser").collapse('hide');
+            $('#MutliModal').modal('hide');
+            $("#SavePass").collapse('hide');
+        }
+    });
+</script>

@@ -1,0 +1,71 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - ABC Pocket</title>
+
+    <link rel="stylesheet" href="../Views/StyleSheet.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" />
+    <style type="text/css">
+        body, header {
+            color: #B5BC00;
+            background-color: black;
+        }
+
+        .logo {
+            width: 300px;      
+        }
+
+        .boton {
+            margin-left: 550px;
+        }
+
+    </style>
+    <!--<script>
+        function miFuncion() {
+            $("#VerifyUser").collapse('hide');
+            $('#MutliModal').modal('hide');
+            $("#SavePass").collapse('hide');
+        }
+        window.onload = miFuncion;
+    </script>-->
+</head>
+<body>
+    <header>
+        <nav class="">
+            <div class="container header">
+                <a href="https://www.abcleasing.com.mx/"><img src="~/img/abc.png" alt="ABC Leasing" class="logo"></a>
+                <!--<a class="navbar-brand" asp-area="" asp-page="/Index">ABC Leasing | Usuarios ABC Pocket</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target=".navbar-collapse" aria-controls="navbarSupportedContent"
+            aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="navbar-collapse collapse d-sm-inline-flex flex-sm-row-reverse">
+        <ul class="navbar-nav flex-grow-1">
+            <li class="nav-item">
+                <a class="nav-link text-dark" asp-area="" asp-page="/Index">Inicio</a>
+            </li>
+        </ul>
+    </div>-->
+            </div>
+        </nav>
+    </header>
+    <div class="container border-top">
+        <main role="main" class="pb-3">
+            @RenderBody()
+        </main>
+    </div>
+
+    <!--<footer class="border-top footer text-muted">
+        <div class="container">
+            &copy; 2021 - ABCLeasing--><!-- - <a asp-area="" asp-page="/Privacy">Aviso de Privacidad</a>-->
+        <!--</div>
+    </footer>-->
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @RenderSection("Scripts", required: false)
+</body>
+</html>

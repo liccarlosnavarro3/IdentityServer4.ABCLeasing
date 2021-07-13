@@ -1,0 +1,81 @@
+﻿@using PagedList.Mvc;
+
+@model PagedList.IPagedList<ABCLeasing.CRUD.ClientesABC>
+
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2>Clientes ABC Leasing</h2>
+
+@*<p>
+    @Html.ActionLink("Crear Nuevo", "Create")
+</p>*@
+
+@using (Html.BeginForm("Index", "Clientes", FormMethod.Get))
+{
+    <p>
+        <div class="form-inline">
+            <select name="PageSize" id="PageSize" class="form-control">
+                <option @if ((int)ViewBag.PageSize == 10) { @Html.Raw("selected") } value="10"> 10</option>
+                <option @if ((int)ViewBag.PageSize == 25) { @Html.Raw("selected") } value="25"> 25</option>
+                <option @if ((int)ViewBag.PageSize == 50) { @Html.Raw("selected") } value="50"> 50</option>
+            </select>
+
+            <input type="submit" value="Mostrar Registros" class="btn btn-sm btn-primary" />
+        </div>
+    </p>
+}
+
+@using (Html.BeginForm("Index", "Clientes", FormMethod.Get))
+{
+    <p>
+        <div class="form-inline"> 
+            Búsqueda: <input type="text" name="searchString" value="@ViewData["CurrentFilter"]" />
+            <input type="submit" value="Buscar" class="btn btn-sm btn-primary" />
+        </div>
+    </p>
+}
+<table class="table">
+    <tr>
+        <th>
+            No Cliente
+        </th>
+        <th>
+            RFC
+        </th>
+        <th>
+            Nombre
+        </th>
+        <th></th>
+    </tr>
+
+    @foreach (var item in Model)
+    {
+        <tr>
+            <td>
+                @Html.DisplayFor(modelItem => item.no_cliente)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.RFC)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.nombre)
+            </td>
+            <td>
+                @Html.ActionLink("Cambiar Contraseña", "Edit", new { id = item.user_id }) |
+                @Html.ActionLink("Detalles", "Details", new { id = item.user_id })
+                @*@Html.ActionLink("Borrar", "Delete", new { id = item.user_id })*@
+            </td>
+        </tr>
+    }
+
+</table>
+
+<br />
+Página @(Model.PageCount < Model.PageNumber ? 0 : Model.PageNumber) de @Model.PageCount
+<br />
+Total de Clientes @Model.TotalItemCount
+
+@Html.PagedListPager(Model, page => Url.Action("Index", "Clientes", new { page, pageSize = ViewBag.PageSize }))
