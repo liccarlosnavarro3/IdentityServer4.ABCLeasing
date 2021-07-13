@@ -18,11 +18,11 @@ namespace WebService.Models
 
     public class ClienteImx
     {
-            public string rfc { get; set; }
-            public string email_notificacion { get; set; }
-            public string email_facturacion { get; set; }
-            public string telefono { get; set; }
-            public string celular { get; set; }
+        public string rfc { get; set; }
+        public string email_notificacion { get; set; }
+        public string email_facturacion { get; set; }
+        public string telefono { get; set; }
+        public string celular { get; set; }
     }
 
     public class ContratoConcentrado
@@ -66,5 +66,19 @@ namespace WebService.Models
     {
         public string solicitud_financiacion { get; set; }
         public string fecha_ejecucion { get; set; }
+    }
+
+    public class PolizaSeguro
+    {
+        public string contrato { get; set; }
+        public string descripcion { get; set; }
+        public string serial { get; set; }
+        public string guid { get; set; }
+        public string nombre { get; set; }
+        public string telefono1 { get; set; }
+        public string telefono2 { get; set; }
+        public string numeroPoliza { get; set; }
+        public string fechaExpiracion { get; set; }
+        public string estatus { get; set; }
     }
 }

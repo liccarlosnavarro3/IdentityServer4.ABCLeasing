@@ -16,6 +16,7 @@ namespace WebService.Controllers
         List<ContratoConcentrado> listaContratosConcentrados = new List<ContratoConcentrado>();
         List<ContratoDetalle> listaContratoDetalles = new List<ContratoDetalle>();
         List<ClienteImx> listaClientesImx = new List<ClienteImx>();
+        List<PolizaSeguro> listaPolizaSeguro = new List<PolizaSeguro>(); 
 
         [HttpGet]
         [Route("api/cuentas")]
@@ -910,7 +911,7 @@ namespace WebService.Controllers
         [HttpGet]
         [Route("api/poliza_seguro")]
         [Authorize]
-        public ClabeSTP GetPolizaSeguro(string RFC)
+        public List<PolizaSeguro> GetPolizaSeguro(string RFC)
         {
             try
             {
@@ -928,23 +929,67 @@ namespace WebService.Controllers
                 oracleComando.CommandType = CommandType.Text;
                 oracleComando.Connection = oracleConexion;
 
-                string ConsultaSQL = "'" + RFC + "'";
+                string ConsultaSQL = "select distinct" +
+                    "    DOSS.ANCREFDOSS Contrato," +
+                    "    VH_MARQUE || ' ' || LIB_BIEN || '/' || VH_COLEUR || '/' || VH_MODELE unit_description," +
+                    "    VH_SER_NUM unit_serial," +
+                    "    '' guid," +
+                    "    p.agent as insurance_name," +
+                    "    '' phone1, '' phone2," +
+                    "    p.policy_ref as insurance_policie_number," +
+                    "    s.end_date as insurance_expiration_date," +
+                    "    '' insurance_policie_status" +
+                    " from imxdb.T_REQ_SERV_INSUR s" +
+                    "    INNER JOIN G_PIECE PI ON PI.REFDOSS = s.refdoss_reqst" +
+                    "    INNER JOIN G_DOSSIER DOSS ON DOSS.REFDOSS = PI.REFDOSS" +
+                    "    LEFT JOIN imxdb.T_PREST_INSTAL i ON i.REQ_PREST_ID = s.IMX_UN_ID" +
+                    "    LEFT JOIN imxdb.T_POLICY_DETAILS p ON s.IMX_UN_ID = p.REFINSUR" +
+                    "    join T_LEAS_ASSETS t on s.refdoss_reqst = t.REFDOSS_REQST" +
+                    "    join G_PATRIMOINE g_p on t.REFER_ASSET = g_p.REFPATRIMOINE" +
+                    " WHERE S.FLAG_ACTIVE = 'O'" +
+                    "    AND NVL(S.IS_CANCELLED,'N') <> 'O'" +
+                    "    AND NVL(S.IS_STOPPED,'N') <> 'O'" +
+                    "    AND PI.STR_20_1 in ('ACT')" +
+                    "    and DOSS.ANCREFDOSS in (" +
+                    "    Select d.ANCREFDOSS" +
+                    "    From g_individu G" +
+                    "        join t_intervenants T on G.refindividu = T.refindividu" +
+                    "        join g_dossier d on d.refdoss = t.refdoss" +
+                    "        join g_piece pi on pi.refdoss = d.REFDOSS" +
+                    "    where T.reftype = 'DB'" +
+                    "        and G.TVA = '" + RFC + "'" +
+                    "        and d.CATEGDOSS like 'FINANCING REQUEST%'" +
+                    "        and pi.STR_20_1 in ('ACT', 'ECT'))" +
+                    " Order By DOSS.ANCREFDOSS, s.end_date, p.policy_ref";
 
                 oracleComando.CommandText = ConsultaSQL;
 
                 OracleDataReader dataReader = oracleComando.ExecuteReader();
 
-                ClabeSTP c = new ClabeSTP();
+                PolizaSeguro p = new PolizaSeguro();
                 while (dataReader.Read())
                 {
-                    c.clabe = dataReader["CLABE_STP"].ToString();
+                    p = new PolizaSeguro
+                    {
+                        contrato = dataReader["Contrato"].ToString(),
+                        descripcion = dataReader["unit_description"].ToString(),
+                        serial = dataReader["unit_serial"].ToString(),
+                        guid = dataReader["guid"].ToString(),
+                        nombre = dataReader["insurance_name"].ToString(),
+                        telefono1 = dataReader["phone1"].ToString(),
+                        telefono2 = dataReader["phone2"].ToString(),
+                        numeroPoliza = dataReader["insurance_policie_number"].ToString(),
+                        fechaExpiracion = dataReader["insurance_expiration_date"].ToString(),
+                        estatus = dataReader["insurance_policie_status"].ToString()
+                    };
+                    this.listaPolizaSeguro.Add(p);
                 }
 
                 dataReader.Close();
                 oracleComando.Dispose();
                 oracleConexion.Close();
 
-                return c;
+                return listaPolizaSeguro;
             }
             catch (Exception)
             {
