@@ -44,64 +44,69 @@ namespace WebService.Controllers
                 oracleComando.CommandType = CommandType.Text;
                 oracleComando.Connection = oracleConexion;
 
-                string ConsultaSQL = "Select " +
-                    "CASE WHEN IND.moralphy = 'P' THEN IND.PRENOM || ' ' || IND.NOMCOMPL || ' ' ELSE '' END || IND.NOM || CASE WHEN IND.moralphy = 'P' THEN ' ' || IND.STR33 ELSE '' END || ' ' || CASE WHEN IND.moralphy = 'M' THEN IND.GENRE ELSE '' END Cliente, " +
-                    "IND.TVA RFC, " +
-                    "Sum(tabla.Rentas_Devengar) Rentas_Devengar, " +
-                    "Sum(tabla.RENTAS_DEVENGAR + ta.RESIDUAL_VALUE) Rentas_Devengar_Residual, " +
-                    "Sum(tabla.SALDO_INS_CAPITAL + ta.RESIDUAL_VALUE) Riesgo_Expuesto, " +
-                    "NVL(Sum(OCon.Otros_Conceptos), 0) Otros_Conceptos_Vencidos, " +
-                    "NVL(Sum(Venc.Rentas_Vencidas), 0) Total_Exigible " +
-                "from imxdb.G_DOSSIER DOSS " +
-                    "inner join(Select REFTYPE, REFDOSS, REFINDIVIDU From imxdb.T_INTERVENANTS Where NVL(reftype,'DB') In('DB')) T on t.refdoss = DOSS.refdoss " +
-                    "inner join(Select MORALPHY, PRENOM, NOMCOMPL, NOM, STR33, GENRE, TVA, REFINDIVIDU From imxdb.G_INDIVIDU) IND on t.refindividu = IND.refindividu " +
-                        "inner join(select c.refdoss_reqst, max(c.imx_un_id) imx_un_id from imxdb.T_FIN_AMO c inner join (" +
-                            "Select IMX_UN_ID, TYPE, STR3, DT04_DT From IMXDB.g_piecedet Where TYPE = 'ANNEXE_DEMANDE_FIN' AND STR3 = 'ACT')det on det.imx_un_id = c.ANNEX_ID " +
-                                "where det.DT04_DT < (TRUNC(sysdate, 'DD') + 1) and(flag_active is null or flag_active = 'O')" +
-                            "group by c.refdoss_reqst) uvt on uvt.refdoss_reqst = DOSS.refdoss " +
-                    "inner join(Select IMX_UN_ID, REFDOSS_REQST, ANNEX_ID, RESIDUAL_VALUE From imxdb.T_FIN_AMO) ta on ta.refdoss_reqst = DOSS.refdoss and ta.imx_un_id = uvt.imx_un_id " +
-                    "inner join(select distinct his.fin_amort_id" +
-                        ", SUM(case when his.FEC_FACTURADO >= (TRUNC(sysdate, 'DD') + 1) THEN ROUND(his.Capital, 2) ELSE 0 END) SALDO_INS_CAPITAL" +
-                        ", count(his.instal_number) PLAZO" +
-                        ", MIN(his.instal_due_dt) VEN_PRIMER_RENTA" +
-                        ", SUM(case when his.FEC_FACTURADO >= (TRUNC(sysdate, 'DD') + 1) THEN ROUND((his.Capital + his.Interes), 2) ELSE 0 END) RENTAS_DEVENGAR " +
-                            "from(" +
-                            "select amort.fin_amort_id, amort.instal_due_dt, amort.instal_number, amort.capital_installment Capital, amort.interest_installment interes, nvl(ent.ER_DAT_DT, amort.instal_due_dt) FEC_FACTURADO " +
-                            "from imxdb.t_amort_histo amort " +
-                            "left join(" +
-                                "select elem.refelem, entx.er_dat_dt from imxdb.g_elemfi elem " +
-                                "inner join (select d.df_num, d.df_rel from imxdb.f_detfac d) det on det.df_num = elem.LIBELLE_20_2 " +
-                                "inner join(select e.er_num, e.ER_DAT_DT from imxdb.f_entrel e) entx on entx.er_num = det.df_rel " +
-                                "where elem.libelle_20_3 = 'LOY'" +
-                            ") ent on ent.refelem = amort.refelem_fi_inst " +
-                        "union all " +
-                        "select amort.fin_amort_id, amort.instal_due_dt, amort.instal_number, amort.capital_installment Capital, amort.interest_installment interes, nvl(ent.ER_DAT_DT, amort.instal_due_dt) FEC_FACTURADO " +
-                        "from imxdb.T_AMORT_INSTAL amort " +
-                        "left join (select elem.refelem, entx.er_dat_dt from imxdb.g_elemfi elem " +
-                            "inner join (select d.df_num, d.df_rel from imxdb.f_detfac d) det on det.df_num = elem.LIBELLE_20_2 " +
-                            "inner join(select e.er_num, e.ER_DAT_DT from imxdb.f_entrel e) entx on entx.er_num = det.df_rel " +
-                        "where elem.libelle_20_3 = 'LOY' " +
-                        ") ent on ent.refelem = amort.refelem_fi_inst " +
-                        ") his " +
-                    "group by his.fin_amort_id " +
-                    ") tabla on tabla.fin_amort_id = uvt.imx_un_id " +
-                "Left Join(" +
-                    "(Select df_dos, Rentas_Vencidas, Saldo_Vencido_Capital, ER_REG_DT from" +
-                        "(Select df_dos, F.ER_TDB Rentas_Vencidas, F.ER_TDB Saldo_Vencido_Capital, er_reg_dt ER_REG_DT from imxdb.F_ENTREL F " +
-                           "inner join (Select LIBELLE From imxdb.G_ELEMFI) g on f.er_refext1 = g.libelle " +
-                           "inner join(Select DF_REL, DF_NOM, DF_DOS, DF_INV_GROUP From imxdb.F_DETFAC) d on f.er_num = d.df_rel " +
-                           "where F.ER_TDB_MVT > NVL(F.ER_PAYE_MVT, 0) and upper(d.df_nom) = 'LOY' " +
-                           "order by er_reg_dt) where rownum = 1)" +
-                    ") Venc On Venc.df_dos = DOSS.REFDOSS " +
-                "Left Join((Select df_dos, Otros_Conceptos from " +
-                    "(Select df_dos, F.ER_TDB Otros_Conceptos from imxdb.F_ENTREL F " +
-                        "inner join (Select LIBELLE From imxdb.G_ELEMFI) g on f.er_refext1 = g.libelle " +
-                        "inner join(Select DF_REL, DF_NOM, DF_DOS, DF_INV_GROUP From imxdb.F_DETFAC) d on f.er_num = d.df_rel " +
-                    "where F.ER_TDB_MVT > NVL(F.ER_PAYE_MVT, 0) and d.DF_INV_GROUP = 'C' " +
-                    "order by er_reg_dt) where rownum = 1)" +
-                ") OCon On OCon.df_dos = DOSS.REFDOSS " +
-                "where doss.categdoss LIKE 'FINANCING REQUEST%' And IND.TVA = '" + RFC +
-                "' Group By IND.TVA, IND.moralphy, IND.PRENOM, IND.NOMCOMPL, IND.NOM, IND.STR33, IND.GENRE";
+                string ConsultaSQL = "select" +
+                    "    CASE WHEN IND.moralphy = 'P' THEN IND.PRENOM || ' ' || IND.NOMCOMPL || ' ' ELSE '' END || IND.NOM || CASE WHEN IND.moralphy = 'P' THEN ' ' || IND.STR33 ELSE '' END || ' ' || CASE WHEN IND.moralphy = 'M' THEN IND.GENRE ELSE '' END Cliente," +
+                    "   IND.TVA RFC," +
+                    "   Sum (tabla.Rentas_Devengar * (1 + tabla.TASA_IVA)) Rentas_Devengar," +
+                    "	Sum((tabla.RENTAS_DEVENGAR + uvt.RESIDUAL_VALUE) * (1 + tabla.TASA_IVA)) Rentas_Devengar_Residual," +
+                    "	Sum((tabla.SALDO_INS_CAPITAL + uvt.RESIDUAL_VALUE)) Riesgo_Expuesto," +
+                    "	Sum(NVL((Select" +
+                    "        sum(F.ER_TDB_MVT - NVL(F.ER_PAYE_MVT, 0))" +
+                    "        from(select df_dos, df_rel from imxdb.F_DETFAC where DF_INV_GROUP in ('C', 'F') group by df_dos, df_rel) d" +
+                    "            inner join imxdb.F_ENTREL F on d.df_rel = f.er_num" +
+                    "        where F.ER_TDB_MVT > NVL(F.ER_PAYE_MVT, 0)" +
+                    "        and d.df_dos = DOSS.refdoss), 0)) Otros_Conceptos_Vencidos," +
+                    "	Sum(nvl((Select sum(D.DF_MONTTC_DOS)" +
+                    "        from imxdb.F_DETFAC d" +
+                    "            inner join imxdb.F_ENTREL F on d.df_rel = f.er_num" +
+                    "        where F.ER_TDB_MVT > NVL(F.ER_PAYE_MVT, 0)" +
+                    "            and d.df_nom in ('LOY', 'FRLO', 'FRAD')" +
+                    "            and DF_INV_GROUP = 'A'" +
+                    "            and d.df_dos = DOSS.REFDOSS" +
+                    "        ), 0)) Total_Exigible" +
+                    " from imxdb.G_PIECE GP" +
+                    "    inner join imxdb.T_INTERVENANTS T on GP.refdoss = T.refdoss" +
+                    "    inner join imxdb.G_DOSSIER DOSS on T.refdoss = DOSS.refdoss" +
+                    "    inner join imxdb.G_INDIVIDU IND on IND.refindividu = t.refindividu" +
+                    "    inner join imxdb.T_FIN_AMO uvt on DOSS.refdoss = uvt.refdoss_reqst" +
+                    "        inner join(" +
+                    "            select distinct his.fin_amort_id" +
+                    "                , SUM(case when his.FEC_FACTURADO >= (TRUNC(sysdate, 'DD') + 1) THEN ROUND(his.Capital, 2) ELSE 0 END) SALDO_INS_CAPITAL" +
+                    "                , count(his.instal_number) PLAZO" +
+                    "                , MIN(his.instal_due_dt) VEN_PRIMER_RENTA" +
+                    "                , SUM(case when his.FEC_FACTURADO >= (TRUNC(sysdate, 'DD') + 1) THEN ROUND((his.Capital + his.Interes), 2) ELSE 0 END) RENTAS_DEVENGAR" +
+                    "                , MAX(his.DF_TAUX_TVA) TASA_IVA" +
+                    "            FROM" +
+                    "                (select amort.fin_amort_id," +
+                    "                    amort.instal_due_dt," +
+                    "                    amort.instal_number," +
+                    "                    amort.Capital," +
+                    "                    amort.interes," +
+                    "                    nvl(ent.ER_DAT_DT, amort.instal_due_dt) FEC_FACTURADO," +
+                    "                    CASE WHEN ent.DF_TAUX_TVA = 0 THEN 0.16 ELSE NVL(ent.DF_TAUX_TVA, 0.16) END DF_TAUX_TVA" +
+                    "                from" +
+                    "                    (select a.fin_amort_id, a.instal_due_dt, a.instal_number, a.capital_installment Capital, a.interest_installment interes, a.refelem_fi_inst" +
+                    "                        from imxdb.t_amort_histo a" +
+                    "                    union all" +
+                    "                    select b.fin_amort_id, b.instal_due_dt, b.instal_number, b.capital_installment Capital, b.interest_installment interes, b.refelem_fi_inst" +
+                    "                        from imxdb.T_AMORT_INSTAL b ) amort" +
+                    "                left join" +
+                    "                    (select elem.refelem, entx.er_dat_dt, DF_TAUX_TVA" +
+                    "                    from imxdb.g_elemfi elem" +
+                    "                        inner join imxdb.f_detfac det on det.df_num = elem.LIBELLE_20_2" +
+                    "          inner join imxdb.f_entrel entx on entx.er_num = det.df_rel" +
+                    "                    where elem.libelle_20_3 = 'LOY'" +
+                    "                    ) ent on amort.refelem_fi_inst = ent.refelem" +
+                    "                )his" +
+                    "            group by his.fin_amort_id" +
+                    "        ) tabla on tabla.fin_amort_id = uvt.imx_un_id" +
+                    " where SUBSTR(doss.categdoss,1,17) = 'FINANCING REQUEST'" +
+                    "    and uvt.flag_active = 'O'" +
+                    "    and NVL(t.reftype,'DB') In('DB')" +
+                    "    and GP.typpiece = 'FINANCING REQUEST'" +
+                    "    and GP.str_20_1 in ('ACT', 'ECT', 'TER')" +
+                    "    and IND.TVA = '" + RFC + "'" +
+                    " Group By IND.TVA, IND.moralphy, IND.PRENOM, IND.NOMCOMPL, IND.NOM, IND.STR33, IND.GENRE";
 
                 oracleComando.CommandText = ConsultaSQL;
 
@@ -162,53 +167,68 @@ namespace WebService.Controllers
                 oracleComando.CommandType = CommandType.Text;
                 oracleComando.Connection = oracleConexion;
 
-                string ConsultaSQL = "select CASE WHEN IND.moralphy = 'P' THEN IND.PRENOM || ' ' || IND.NOMCOMPL || ' ' ELSE '' END || IND.NOM || CASE WHEN IND.moralphy = 'P' THEN ' ' || IND.STR33 ELSE '' END || ' ' || CASE WHEN IND.moralphy = 'M' THEN IND.GENRE ELSE '' END Cliente, " +
-                        "IND.TVA RFC, tabla.Rentas_Devengar Rentas_Devengar, tabla.RENTAS_DEVENGAR + ta.RESIDUAL_VALUE Rentas_Devengar_Residual, " +
-                        "tabla.SALDO_INS_CAPITAL + ta.RESIDUAL_VALUE Riesgo_Expuesto, NVL(OCon.Otros_Conceptos, 0) Otros_Conceptos_Vencidos, " +
-                        "NVL(Venc.Rentas_Vencidas, 0) Total_Exigible " +
-                    "from imxdb.G_DOSSIER DOSS " +
-                    "inner join(Select REFTYPE, REFDOSS, REFINDIVIDU From imxdb.T_INTERVENANTS Where NVL(reftype,'DB') In('DB')) T on t.refdoss = DOSS.refdoss " +
-                    "inner join(Select MORALPHY, PRENOM, NOMCOMPL, NOM, STR33, GENRE, TVA, REFINDIVIDU From imxdb.G_INDIVIDU) IND on t.refindividu = IND.refindividu " +
-                    "inner join(select c.refdoss_reqst, max(c.imx_un_id) imx_un_id from imxdb.T_FIN_AMO c inner join (" +
-                        "Select IMX_UN_ID, TYPE, STR3, DT04_DT From IMXDB.g_piecedet Where TYPE = 'ANNEXE_DEMANDE_FIN' AND STR3 = 'ACT')det on det.imx_un_id = c.ANNEX_ID " +
-                    "where det.DT04_DT < (TRUNC(sysdate, 'DD') + 1) and(flag_active is null or flag_active = 'O') " +
-                    "group by c.refdoss_reqst) uvt on uvt.refdoss_reqst = DOSS.refdoss " +
-                    "inner join(Select IMX_UN_ID, REFDOSS_REQST, ANNEX_ID, RESIDUAL_VALUE From imxdb.T_FIN_AMO) ta on ta.refdoss_reqst = DOSS.refdoss and ta.imx_un_id = uvt.imx_un_id " +
-                    "inner join(select distinct his.fin_amort_id, SUM(case when his.FEC_FACTURADO >= (TRUNC(sysdate, 'DD') + 1) THEN ROUND(his.Capital, 2) ELSE 0 END) SALDO_INS_CAPITAL" +
-                        ", count(his.instal_number) PLAZO, MIN(his.instal_due_dt) VEN_PRIMER_RENTA" +
-                        ", SUM(case when his.FEC_FACTURADO >= (TRUNC(sysdate, 'DD') + 1) THEN ROUND((his.Capital + his.Interes), 2) ELSE 0 END) RENTAS_DEVENGAR " +
-                            "from(select amort.fin_amort_id, amort.instal_due_dt, amort.instal_number, amort.capital_installment Capital, amort.interest_installment interes, nvl(ent.ER_DAT_DT, amort.instal_due_dt) FEC_FACTURADO " +
-                                "from imxdb.t_amort_histo amort " +
-                                "left join(select elem.refelem, entx.er_dat_dt from imxdb.g_elemfi elem " +
-                                    "inner join (select d.df_num, d.df_rel from imxdb.f_detfac d) det on det.df_num = elem.LIBELLE_20_2 " +
-                                    "inner join(select e.er_num, e.ER_DAT_DT from imxdb.f_entrel e) entx on entx.er_num = det.df_rel " +
-                                "where elem.libelle_20_3 = 'LOY') ent on ent.refelem = amort.refelem_fi_inst " +
-                            "union all " +
-                                "select amort.fin_amort_id, amort.instal_due_dt, amort.instal_number, amort.capital_installment Capital, amort.interest_installment interes, nvl(ent.ER_DAT_DT, amort.instal_due_dt) FEC_FACTURADO " +
-                                "from imxdb.T_AMORT_INSTAL amort " +
-                                "left join(select elem.refelem, entx.er_dat_dt from imxdb.g_elemfi elem " +
-                                    "inner join (select d.df_num, d.df_rel from imxdb.f_detfac d) det on det.df_num = elem.LIBELLE_20_2 " +
-                                    "inner join(select e.er_num, e.ER_DAT_DT from imxdb.f_entrel e) entx on entx.er_num = det.df_rel " +
-                                "where elem.libelle_20_3 = 'LOY') ent on ent.refelem = amort.refelem_fi_inst" +
-                            ") his " +
-                            "group by his.fin_amort_id" +
-                        ") tabla on tabla.fin_amort_id = uvt.imx_un_id " +
-                    "Left Join((Select df_dos, Rentas_Vencidas, Saldo_Vencido_Capital, ER_REG_DT from" +
-                        "(Select df_dos, F.ER_TDB Rentas_Vencidas, F.ER_TDB Saldo_Vencido_Capital, er_reg_dt ER_REG_DT " +
-                        "from imxdb.F_ENTREL F " +
-                            "inner join (Select LIBELLE From imxdb.G_ELEMFI) g on f.er_refext1 = g.libelle " +
-                            "inner join(Select DF_REL, DF_NOM, DF_DOS, DF_INV_GROUP From imxdb.F_DETFAC) d on f.er_num = d.df_rel " +
-                        "where F.ER_TDB_MVT > NVL(F.ER_PAYE_MVT, 0) and upper(d.df_nom) = 'LOY' " +
-                    "order by er_reg_dt) where rownum = 1)) Venc On Venc.df_dos = DOSS.REFDOSS " +
-                    "Left Join((Select df_dos, Otros_Conceptos from" +
-                        "(Select df_dos, F.ER_TDB Otros_Conceptos " +
-                        "from imxdb.F_ENTREL F " +
-                            "inner join (Select LIBELLE From imxdb.G_ELEMFI) g on f.er_refext1 = g.libelle " +
-                            "inner join(Select DF_REL, DF_NOM, DF_DOS, DF_INV_GROUP From imxdb.F_DETFAC) d on f.er_num = d.df_rel " +
-                        "where F.ER_TDB_MVT > NVL(F.ER_PAYE_MVT, 0) and d.DF_INV_GROUP = 'C' " +
-                        "order by er_reg_dt) where rownum = 1)" +
-                    ") OCon On OCon.df_dos = DOSS.REFDOSS " +
-                "where doss.categdoss LIKE 'FINANCING REQUEST%' And DOSS.ANCREFDOSS = '" + Contrato + "'";
+                string ConsultaSQL = "select" +
+                    "    CASE WHEN IND.moralphy = 'P' THEN IND.PRENOM || ' ' || IND.NOMCOMPL || ' ' ELSE '' END || IND.NOM || CASE WHEN IND.moralphy = 'P' THEN ' ' || IND.STR33 ELSE '' END || ' ' || CASE WHEN IND.moralphy = 'M' THEN IND.GENRE ELSE '' END Cliente," +
+                    "   IND.TVA RFC," +
+                    "   tabla.Rentas_Devengar * (1 + tabla.TASA_IVA) Rentas_Devengar," +
+                    "	(tabla.RENTAS_DEVENGAR + uvt.RESIDUAL_VALUE) * (1 + tabla.TASA_IVA) Rentas_Devengar_Residual," +
+                    "	(tabla.SALDO_INS_CAPITAL + uvt.RESIDUAL_VALUE) Riesgo_Expuesto," +
+                    "	NVL((Select" +
+                    "        sum(F.ER_TDB_MVT - NVL(F.ER_PAYE_MVT, 0))" +
+                    "        from(select df_dos, df_rel from imxdb.F_DETFAC where DF_INV_GROUP in ('C', 'F') group by df_dos, df_rel) d" +
+                    "            inner join imxdb.F_ENTREL F on d.df_rel = f.er_num" +
+                    "        where F.ER_TDB_MVT > NVL(F.ER_PAYE_MVT, 0)" +
+                    "        and d.df_dos = DOSS.refdoss), 0) Otros_Conceptos_Vencidos," +
+                    "	nvl((Select sum(D.DF_MONTTC_DOS)" +
+                    "        from imxdb.F_DETFAC d" +
+                    "            inner join imxdb.F_ENTREL F on d.df_rel = f.er_num" +
+                    "        where F.ER_TDB_MVT > NVL(F.ER_PAYE_MVT, 0)" +
+                    "            and d.df_nom in ('LOY', 'FRLO', 'FRAD')" +
+                    "            and DF_INV_GROUP = 'A'" +
+                    "            and d.df_dos = DOSS.REFDOSS" +
+                    "    ), 0) Total_Exigible" +
+                    " from imxdb.G_PIECE GP" +
+                    "    inner join imxdb.T_INTERVENANTS T on GP.refdoss = T.refdoss" +
+                    "    inner join imxdb.G_DOSSIER DOSS on T.refdoss = DOSS.refdoss" +
+                    "    inner join imxdb.G_INDIVIDU IND on IND.refindividu = t.refindividu" +
+                    "    inner join imxdb.T_FIN_AMO uvt on DOSS.refdoss = uvt.refdoss_reqst" +
+                    "        inner join(" +
+                    "            select distinct his.fin_amort_id" +
+                    "                , SUM(case when his.FEC_FACTURADO >= (TRUNC(sysdate, 'DD') + 1) THEN ROUND(his.Capital, 2) ELSE 0 END) SALDO_INS_CAPITAL" +
+                    "                , count(his.instal_number) PLAZO" +
+                    "                , MIN(his.instal_due_dt) VEN_PRIMER_RENTA" +
+                    "                , SUM(case when his.FEC_FACTURADO >= (TRUNC(sysdate, 'DD') + 1) THEN ROUND((his.Capital + his.Interes), 2) ELSE 0 END) RENTAS_DEVENGAR" +
+                    "                , MAX(his.DF_TAUX_TVA) TASA_IVA" +
+                    "            FROM" +
+                    "                (select amort.fin_amort_id," +
+                    "                    amort.instal_due_dt," +
+                    "                    amort.instal_number," +
+                    "                    amort.Capital," +
+                    "                    amort.interes," +
+                    "                    nvl(ent.ER_DAT_DT, amort.instal_due_dt) FEC_FACTURADO," +
+                    "                    CASE WHEN ent.DF_TAUX_TVA = 0 THEN 0.16 ELSE NVL(ent.DF_TAUX_TVA, 0.16) END DF_TAUX_TVA" +
+                    "                from" +
+                    "                    (select a.fin_amort_id, a.instal_due_dt, a.instal_number, a.capital_installment Capital, a.interest_installment interes, a.refelem_fi_inst" +
+                    "                        from imxdb.t_amort_histo a" +
+                    "                    union all" +
+                    "                    select b.fin_amort_id, b.instal_due_dt, b.instal_number, b.capital_installment Capital, b.interest_installment interes, b.refelem_fi_inst" +
+                    "                    from imxdb.T_AMORT_INSTAL b ) amort" +
+                    "                left join" +
+                    "                (select elem.refelem, entx.er_dat_dt, DF_TAUX_TVA" +
+                    "                from imxdb.g_elemfi elem" +
+                    "                    inner join imxdb.f_detfac det on det.df_num = elem.LIBELLE_20_2" +
+                    "      inner join imxdb.f_entrel entx on entx.er_num = det.df_rel" +
+                    "                where elem.libelle_20_3 = 'LOY'" +
+                    "               ) ent on amort.refelem_fi_inst = ent.refelem" +
+                    "                )his" +
+                    "            group by his.fin_amort_id" +
+                    "        ) tabla on tabla.fin_amort_id = uvt.imx_un_id" +
+                    " where SUBSTR(doss.categdoss,1,17) = 'FINANCING REQUEST'" +
+                    "    and uvt.flag_active = 'O'" +
+                    "    and NVL(t.reftype,'DB') In('DB')" +
+                    "    and GP.typpiece = 'FINANCING REQUEST'" +
+                    "    and GP.str_20_1 in ('ACT', 'ECT', 'TER')" +
+                    "    and DOSS.ANCREFDOSS = '" + Contrato + "'";
 
                 oracleComando.CommandText = ConsultaSQL;
 
@@ -243,15 +263,170 @@ namespace WebService.Controllers
             return listaRiesgos;
         }
 
-        [HttpPut]
-        [Route("api/update_client")]
+        [HttpGet]
+        [Route("api/solicitud_financiacion")]
         [Authorize]
-        public IHttpActionResult PutClientes([FromBody] ClienteImx put_cliente)
+        // GET: Solicitud de Financiación
+        public SolicitudFinanciacion GetSolicitudFinanciacion(string Contrato)
         {
             try
             {
-                AES aES = new AES();
+                var path = AppDomain.CurrentDomain.BaseDirectory;
 
+                // create connection
+                OracleConnection oracleConexion = new OracleConnection();
+
+                // create connection string using builder
+                OracleConnectionStringBuilder sqlConexionString = new OracleConnectionStringBuilder();
+                sqlConexionString.ConnectionString = ConfigurationManager.ConnectionStrings["ABCLeasingOracle"].ConnectionString;
+
+                // connect
+                oracleConexion.ConnectionString = sqlConexionString.ConnectionString;
+                oracleConexion.Open();
+                Console.WriteLine("Connection established (" + oracleConexion.ServerVersion + ")");
+
+                OracleCommand oracleComando = oracleConexion.CreateCommand();
+                oracleComando.CommandType = CommandType.Text;
+                oracleComando.Connection = oracleConexion;
+
+                string ConsultaSQL = "Select DOSS.REFDOSS solicitud_financiacion From imxdb.G_DOSSIER DOSS Where DOSS.ANCREFDOSS = '" + Contrato + "'";
+
+                oracleComando.CommandText = ConsultaSQL;
+
+                OracleDataReader dataReader = oracleComando.ExecuteReader();
+
+                SolicitudFinanciacion s = new SolicitudFinanciacion();
+                while (dataReader.Read())
+                {
+                    s.solicitud_financiacion = dataReader["solicitud_financiacion"].ToString();
+                }
+
+                dataReader.Close();
+                oracleComando.Dispose();
+                oracleConexion.Close();
+
+                return s;
+            }
+            catch (Exception)
+            {
+                Exception newEx = new Exception("Error al consultar.");
+                throw newEx;
+            }
+        }
+
+        [HttpGet]
+        [Route("api/cuentas_bancarias")]
+        [Authorize]
+        // GET: Solicitud de Financiación
+        public CuentasBancarias GetCuentasBancarias(string Contrato)
+        {
+            try
+            {
+                var path = AppDomain.CurrentDomain.BaseDirectory;
+
+                // create connection
+                OracleConnection oracleConexion = new OracleConnection();
+
+                // create connection string using builder
+                OracleConnectionStringBuilder sqlConexionStringOracle = new OracleConnectionStringBuilder();
+                sqlConexionStringOracle.ConnectionString = ConfigurationManager.ConnectionStrings["ABCLeasingOracle"].ConnectionString;
+
+                // connect
+                oracleConexion.ConnectionString = sqlConexionStringOracle.ConnectionString;
+                oracleConexion.Open();
+                Console.WriteLine("Connection established (" + oracleConexion.ServerVersion + ")");
+
+                OracleCommand oracleComando = oracleConexion.CreateCommand();
+                oracleComando.CommandType = CommandType.Text;
+                oracleComando.Connection = oracleConexion;
+
+                string ConsultaSQL = "SELECT DOSS.REFDOSS CONTRATO, NVL(FP_LA.nom,'505') SOCIO_FONDEADOR, FP_LA.REFDOSS REF_FONDEO, IND.TVA RFC, CLABE_STP" +
+                    " FROM imxdb.G_DOSSIER DOSS" +
+                    "    LEFT JOIN(" +
+                    "    SELECT distinct fp.REFLEASFR, i2.nom, REFL.REFDOSS" +
+                    "    FROM imxdb.FP_LOAN_ALLOC fp" +
+                    "        , imxdb.t_intervenants t2" +
+                    "        , imxdb.g_individu i2" +
+                    "        , (SELECT REFDOSS, ANCREFDOSS FROM imxdb.G_DOSSIER ) REFL" +
+                    "    WHERE t2.REFDOSS = fp.REFLEASFPLOAN" +
+                    "        AND REFL.REFDOSS = fp.refleasfploan" +
+                    "        AND t2.REFTYPE = 'CL'" +
+                    "        AND NVL(fp.DT_CANCEL, to_date('01/01/1901','MM/DD/YYYY')) = '01/01/1901'" +
+                    "        AND t2.REFINDIVIDU = i2.REFINDIVIDU  ) FP_LA on FP_LA.REFLEASFR = DOSS.REFDOSS" +
+                    "    INNER JOIN(Select refdoss, reftype, refindividu From imxdb.T_INTERVENANTS) T on t.refdoss = DOSS.refdoss and T.reftype = 'DB'" +
+                    "    INNER JOIN(Select TVA, refindividu From imxdb.G_INDIVIDU) IND on t.refindividu = IND.refindividu" +
+                    "    INNER JOIN(" +
+                    "        SELECT t.REFEXT CLABE_STP, g.tva TVA FROM T_INDIVIDU T" +
+                    "        INNER JOIN g_individu G on t.REFINDIVIDU = g.REFINDIVIDU" +
+                    "        WHERE t.SOCIETE = 'REF SANTANDER') REFER On REFER.TVA = IND.TVA" +
+                    " WHERE DOSS.ANCREFDOSS = '" + Contrato + "'";
+
+                oracleComando.CommandText = ConsultaSQL;
+
+                OracleDataReader oracleReader = oracleComando.ExecuteReader();
+
+                if (oracleReader.Read())
+                {
+                    string socio_fondeador = oracleReader["socio_fondeador"].ToString();
+                    string clabe_stp = oracleReader["clabe_stp"].ToString();
+
+                    var sqlConexionStringSQL = ConfigurationManager.ConnectionStrings["ABCLeasingABC"].ConnectionString;
+
+                    SqlConnection sqlConexion = new SqlConnection(sqlConexionStringSQL);
+                    string sqlConsulta = "Select fideicomiso, banco, beneficiario, cuenta, clabe, moneda, rfc From CuentasBancarias Where fideicomiso = '" + socio_fondeador + "'";
+
+                    sqlConexion.Open();
+
+                    SqlCommand sqlComando = new SqlCommand(sqlConsulta, sqlConexion);
+
+                    SqlDataReader sqlReader = sqlComando.ExecuteReader();
+
+                    CuentasBancarias c = new CuentasBancarias();
+                    while (sqlReader.Read())
+                    {
+                        c.fideicomiso = sqlReader["fideicomiso"].ToString();
+                        c.banco = sqlReader["banco"].ToString();
+                        c.beneficiario = sqlReader["beneficiario"].ToString();
+                        c.cuenta = sqlReader["cuenta"].ToString();
+                        c.clabe = sqlReader["clabe"].ToString();
+                        c.moneda = sqlReader["moneda"].ToString();
+                        c.rfc = sqlReader["rfc"].ToString();
+                        if (socio_fondeador == "505")
+                        {
+                            c.cuenta_ca = clabe_stp;
+                        }
+                    }
+                    sqlReader.Close();
+                    sqlComando.Dispose();
+                    sqlConexion.Close();
+                
+                    oracleReader.Close();
+                    oracleComando.Dispose();
+                    oracleConexion.Close();
+
+                    return c;
+                }
+                else
+                {
+                    CuentasBancarias c = new CuentasBancarias();
+                    return c;
+                }
+            }
+            catch (Exception)
+            {
+                Exception newEx = new Exception("Error al consultar.");
+                throw newEx;
+            }
+        }
+
+        [HttpPost]
+        [Route("api/update_client")]
+        [Authorize]
+        public IHttpActionResult Post([FromBody] ClienteImx put_cliente)
+        {
+            try
+            {
+                //AES aES = new AES();
                 var sqlConexionString = ConfigurationManager.ConnectionStrings["ABCLeasingABC"].ConnectionString;
                 using (SqlConnection sqlConexion = new SqlConnection(sqlConexionString))
                 {
@@ -335,15 +510,13 @@ namespace WebService.Controllers
             return listaClientesImx;
         }
 
-        [HttpPut]
+        [HttpPost]
         [Route("api/update_client/authorize")]
         [Authorize]
-        public IHttpActionResult PutClientesRevisar(string RFC)
+        public IHttpActionResult PostAuthorize(string RFC)
         {
             try
             {
-                AES aES = new AES();
-
                 var sqlConexionString = ConfigurationManager.ConnectionStrings["ABCLeasingABC"].ConnectionString;
                 using (SqlConnection sqlConexion = new SqlConnection(sqlConexionString))
                 {
@@ -442,15 +615,13 @@ namespace WebService.Controllers
             return listaClientesImx;
         }
 
-        [HttpPut]
+        [HttpPost]
         [Route("api/update_client/send")]
         [Authorize]
-        public IHttpActionResult PutClientesEnviar(string RFC)
+        public IHttpActionResult PostSend(string RFC)
         {
             try
             {
-                AES aES = new AES();
-
                 var sqlConexionString = ConfigurationManager.ConnectionStrings["ABCLeasingABC"].ConnectionString;
                 using (SqlConnection sqlConexion = new SqlConnection(sqlConexionString))
                 {
@@ -801,6 +972,60 @@ namespace WebService.Controllers
             }
         }
 
+        //[HttpGet]
+        //[Route("api/clabe_stp")]
+        //[Authorize]
+        //// GET: Clabe_STP
+        //public ClabeSTP GetClabeSTP(string RFC)
+        //{
+        //    try
+        //    {
+        //        var path = AppDomain.CurrentDomain.BaseDirectory;
+
+        //        // create connection
+        //        OracleConnection oracleConexion = new OracleConnection();
+
+        //        // create connection string using builder
+        //        OracleConnectionStringBuilder sqlConexionString = new OracleConnectionStringBuilder();
+        //        sqlConexionString.ConnectionString = ConfigurationManager.ConnectionStrings["ABCLeasingOracle"].ConnectionString;
+
+        //        // connect
+        //        oracleConexion.ConnectionString = sqlConexionString.ConnectionString;
+        //        oracleConexion.Open();
+        //        Console.WriteLine("Connection established (" + oracleConexion.ServerVersion + ")");
+
+        //        OracleCommand oracleComando = oracleConexion.CreateCommand();
+        //        oracleComando.CommandType = CommandType.Text;
+        //        oracleComando.Connection = oracleConexion;
+
+        //        string ConsultaSQL = "SELECT t.REFEXT CLABE_STP" +
+        //            " FROM T_INDIVIDU T" +
+        //                " inner join g_individu G on t.REFINDIVIDU = g.REFINDIVIDU" +
+        //            " WHERE t.SOCIETE = 'CLABE STP' and g.tva = '" + RFC + "'";
+
+        //        oracleComando.CommandText = ConsultaSQL;
+
+        //        OracleDataReader dataReader = oracleComando.ExecuteReader();
+
+        //        ClabeSTP c = new ClabeSTP();
+        //        while (dataReader.Read())
+        //        {
+        //            c.clabe = dataReader["CLABE_STP"].ToString();
+        //        }
+
+        //        dataReader.Close();
+        //        oracleComando.Dispose();
+        //        oracleConexion.Close();
+
+        //        return c;
+        //    }
+        //    catch (Exception)
+        //    {
+        //        Exception newEx = new Exception("Error al consultar.");
+        //        throw newEx;
+        //    }
+        //}
+
         [HttpGet]
         [Route("api/clabe_stp")]
         [Authorize]
@@ -830,7 +1055,7 @@ namespace WebService.Controllers
                 string ConsultaSQL = "SELECT t.REFEXT CLABE_STP" +
                     " FROM T_INDIVIDU T" +
                         " inner join g_individu G on t.REFINDIVIDU = g.REFINDIVIDU" +
-                    " WHERE t.SOCIETE = 'CLABE STP' and g.tva = '" + RFC + "'";
+                    " WHERE t.SOCIETE = 'REF SANTANDER' and g.tva = '" + RFC + "'";
 
                 oracleComando.CommandText = ConsultaSQL;
 

@@ -62,6 +62,23 @@ namespace WebService.Models
         public string clabe { get; set; }
     }
 
+    public class SolicitudFinanciacion
+    {
+        public string solicitud_financiacion { get; set; }
+    }
+
+    public class CuentasBancarias
+    {
+        public string fideicomiso { get; set; }
+        public string banco { get; set; }
+        public string beneficiario { get; set; }
+        public string cuenta { get; set; }
+        public string clabe { get; set; }
+        public string moneda { get; set; }
+        public string rfc { get; set; }
+        public string cuenta_ca { get; set; }
+    }
+
     public class EdoCuenta
     {
         public string solicitud_financiacion { get; set; }

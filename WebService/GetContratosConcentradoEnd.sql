@@ -1,2 +1,0 @@
-'
-Order By DOSS.ANCREFDOSS

@@ -11,7 +11,7 @@ namespace WebService.Models
         public String tipo_relacion { get; set; }
         public String contrato { get; set; }
         public double monto_financiado { get; set; }
-        public double residual_iva { get; set; }
+        public double residual_sin_iva { get; set; }
         public double saldo_ins_inv_neta { get; set; }
         public double importe_rentas_vencidas { get; set; }
         public double otros_conceptos_vencidos { get; set; }

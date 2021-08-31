@@ -1,1 +1,0 @@
-SELECT t.REFEXT CLABE_STP FROM T_INDIVIDU T inner join g_individu G on t.REFINDIVIDU = g.REFINDIVIDU WHERE t.SOCIETE = 'CLABE STP' and g.tva = '
