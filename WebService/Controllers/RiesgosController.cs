@@ -1156,31 +1156,63 @@ namespace WebService.Controllers
 
                 string ConsultaSQL = "select distinct" +
                     "    DOSS.ANCREFDOSS Contrato," +
-                    "    VH_MARQUE || ' ' || LIB_BIEN || '/' || VH_COLEUR || '/' || VH_MODELE unit_description," +
-                    "    VH_SER_NUM unit_serial," +
-                    "    '' guid," +
-                    "    p.agent as insurance_name," +
-                    "    '' phone1, '' phone2," +
-                    "    p.policy_ref as insurance_policie_number," +
-                    "    s.end_date as insurance_expiration_date," +
-                    "    '' insurance_policie_status" +
+                    "    NVL(g_p.VH_MARQUE, g_p.EQP_BRAND) || ' ' || NVL(g_p.LIB_BIEN, g_p.VH_GENRE) || '/' || g_p.VH_COLEUR || '/' || g_p.VH_MODELE unit_description," +
+                    "	nvL(g_p.VH_SER_NUM, g_p.EQP_SER_NUM) unit_serial," +
+                    "	'' guid," +
+                    "	p.agent as insurance_name," +
+                    "	(select decode(tel.numtel, null, ' ', tel.numtel)" +
+                    "    from IMXDB.g_telephone tel" +
+                    "    inner join imxdb.T_INTERVENANTS SEGURO_T on tel.refindividu = SEGURO_T.refindividu and NVL(SEGURO_T.reftype, 'DB') = 'INS'" +
+                    "    inner join imxdb.G_INDIVIDU SEGURO on SEGURO_T.refindividu = SEGURO.refindividu" +
+                    "    where tel.typetel = 'GSM'" +
+                    "       and numtel is not null" +
+                    "       and VALIDITE = 'O'" +
+                    "        and SEGURO_T.refdoss = DOSS.refdoss" +
+                    "        and rownum = 1) phone1, " +
+                    "	(select decode(tel.numtel, null, ' ', tel.numtel)" +
+                    "    from IMXDB.g_telephone tel" +
+                    "    inner join imxdb.T_INTERVENANTS SEGURO_T on tel.refindividu = SEGURO_T.refindividu and NVL(SEGURO_T.reftype, 'DB') = 'INS'" +
+                    "    inner join imxdb.G_INDIVIDU SEGURO on SEGURO_T.refindividu = SEGURO.refindividu" +
+                    "    where tel.typetel = 'BUR'" +
+                    "       and numtel is not null" +
+                    "       and VALIDITE = 'O'" +
+                    "        and SEGURO_T.refdoss = DOSS.refdoss" +
+                    "        and rownum = 1) phone2," +
+                    "	p.policy_ref as insurance_policie_number," +
+                    "	s.end_date as insurance_expiration_date," +
+                    "	CASE WHEN s.end_date < to_date(current_date) THEN  'INACTIVO' ELSE  'ACTIVO' END insurance_policie_status" +
                     " from imxdb.T_REQ_SERV_INSUR s" +
-                    "    INNER JOIN G_PIECE PI ON PI.REFDOSS = s.refdoss_reqst" +
-                    "    INNER JOIN G_DOSSIER DOSS ON DOSS.REFDOSS = PI.REFDOSS" +
-                    "    LEFT JOIN imxdb.T_PREST_INSTAL i ON i.REQ_PREST_ID = s.IMX_UN_ID" +
-                    "    LEFT JOIN imxdb.T_POLICY_DETAILS p ON s.IMX_UN_ID = p.REFINSUR" +
-                    "    join T_LEAS_ASSETS t on s.refdoss_reqst = t.REFDOSS_REQST" +
-                    "    join G_PATRIMOINE g_p on t.REFER_ASSET = g_p.REFPATRIMOINE" +
+                    " INNER JOIN imxdb.G_PIECE PI ON PI.REFDOSS = s.refdoss_reqst" +
+                    " INNER JOIN imxdb.G_DOSSIER DOSS ON DOSS.REFDOSS = PI.REFDOSS" +
+                    " LEFT JOIN imxdb.T_PREST_INSTAL i ON i.REQ_PREST_ID = s.IMX_UN_ID" +
+                    " LEFT JOIN imxdb.T_POLICY_DETAILS p ON s.IMX_UN_ID = p.REFINSUR" +
+                    " INNER JOIN(" +
+                    "    select r.refdoss_reqst, max(u.IMX_UN_ID) IMX_UN_ID" +
+                    "    from imxdb.T_REQ_SERV_INSUR r" +
+                    "    inner join imxdb.T_POLICY_DETAILS u on r.IMX_UN_ID = u.REFINSUR" +
+                    "    where r.FLAG_ACTIVE = 'O' AND NVL(r.IS_CANCELLED,'N') <> 'O' AND NVL(r.IS_STOPPED,'N') <> 'O'" +
+                    "    group by r.refdoss_reqst) ms on p.IMX_UN_ID = ms.IMX_UN_ID" +
+                    " INNER JOIN imxdb.T_LEAS_ASSETS t on s.refdoss_reqst = t.REFDOSS_REQST" +
+                    " INNER JOIN imxdb.G_PATRIMOINE g_p on t.REFER_ASSET = g_p.REFPATRIMOINE" +
                     " WHERE S.FLAG_ACTIVE = 'O'" +
                     "    AND NVL(S.IS_CANCELLED,'N') <> 'O'" +
                     "    AND NVL(S.IS_STOPPED,'N') <> 'O'" +
                     "    AND PI.STR_20_1 in ('ACT')" +
-                    "    and DOSS.ANCREFDOSS in (" +
+                    "    AND g_p.TITRBIEN in ('31', '32', '33', '34', '37', '38')" +
+                    "    and NVL(g_p.VH_SEGM_CATEG,'SUV') NOT IN('EQUIPO ALIADO')" +
+                    "	and t.REFER_ASSET = (" +
+                    "        select REFER_ASSET from(" +
+                    "            select REFER_ASSET, FIN_AMT_AMORT" +
+                    "            from imxdb.T_LEAS_ASSETS FE" +
+                    "            where REFDOSS_REQST = doss.refdoss" +
+                    "            order by FIN_AMT_AMORT desc)" +
+                    "        where rownum = 1)" +
+                    "	and DOSS.ANCREFDOSS in (" +
                     "    Select d.ANCREFDOSS" +
-                    "    From g_individu G" +
-                    "        join t_intervenants T on G.refindividu = T.refindividu" +
-                    "        join g_dossier d on d.refdoss = t.refdoss" +
-                    "        join g_piece pi on pi.refdoss = d.REFDOSS" +
+                    "    From imxdb.g_individu G" +
+                    "    join imxdb.t_intervenants T on G.refindividu = T.refindividu" +
+                    "    join imxdb.g_dossier d on d.refdoss = t.refdoss" +
+                    "    join imxdb.g_piece pi on pi.refdoss = d.REFDOSS" +
                     "    where T.reftype = 'DB'" +
                     "        and G.TVA = '" + RFC + "'" +
                     "        and d.CATEGDOSS like 'FINANCING REQUEST%'" +
