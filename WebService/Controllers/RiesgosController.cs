@@ -1100,11 +1100,18 @@ namespace WebService.Controllers
                 Console.WriteLine("Connection established (" + oracleConexion.ServerVersion + ")");
 
                 OracleCommand oracleComando = oracleConexion.CreateCommand();
+                OracleTransaction transaction;
+
+                // Start a local transaction
+                transaction = oracleConexion.BeginTransaction(IsolationLevel.ReadCommitted);
+                // Assign transaction object for a pending local transaction
+                oracleComando.Transaction = transaction;
+
                 oracleComando.CommandType = CommandType.Text;
                 oracleComando.Connection = oracleConexion;
 
-                string ConsultaSQL = "Insert Into t_elements (refdoss, libelle, typeelem, dtsaisie, dtassoc, dt_envoi_dt) " +
-                    "Values (:Prefdoss, :Plibelle, :Ptypeelem, to_char(sysdate,'j'), to_char(sysdate,'j'), :Pdt_envoi_dt)";
+                string ConsultaSQL = "Insert Into t_elements (refdoss, libelle, typeelem, dtsaisie, dtassoc, dt_envoi_dt, NOM) " +
+                    "Values (:Prefdoss, :Plibelle, :Ptypeelem, to_char(sysdate,'j'), to_char(sysdate,'j'), :Pdt_envoi_dt, :NOM)";
 
                 oracleComando.CommandText = ConsultaSQL;
 
@@ -1112,8 +1119,10 @@ namespace WebService.Controllers
                 oracleComando.Parameters.Add("Plibelle", OracleDbType.Varchar2).Value = "GENERAR ESTADO DE CUENTA";
                 oracleComando.Parameters.Add("Ptypeelem", OracleDbType.Varchar2).Value = "in";
                 oracleComando.Parameters.Add("Pdt_envoi_dt", OracleDbType.Varchar2).Value = new_edo_cuenta.fecha_ejecucion;
+                oracleComando.Parameters.Add("NOM", OracleDbType.Varchar2).Value = "CODIX";
 
                 oracleComando.ExecuteNonQuery();
+                transaction.Commit();
 
                 oracleComando.Dispose();
                 oracleConexion.Dispose();
