@@ -10,6 +10,8 @@ using System.Configuration;
 using Newtonsoft.Json;
 using WebService.Models;
 using System;
+using IdentityModel.Client;
+using System.Net.Http;
 
 namespace WebService.Controllers
 {
@@ -408,6 +410,108 @@ namespace WebService.Controllers
         // DELETE api/values/5
         public void Delete(int id)
         {
+        }
+
+        [HttpPost]
+        [Route("connect/token")]
+        //[Authorize]
+        public IHttpActionResult connect_token([FromBody] ClientABC new_user)
+        {
+            try
+            {
+                AES aES = new AES();
+
+                var sqlConexionString = ConfigurationManager.ConnectionStrings["ABCLeasingABC"].ConnectionString;
+                using (SqlConnection sqlConexion = new SqlConnection(sqlConexionString))
+                {
+                    //Confirmar que existe el Cliente
+                    string sqlConsulta = "SELECT * FROM ClientesABC WHERE UPPER(RFC) = '" + new_user.username.ToUpper() + "'";
+
+                    sqlConexion.Open();
+
+                    SqlCommand sqlComandoSelect = new SqlCommand(sqlConsulta, sqlConexion);
+
+                    SqlDataReader sqlDatos = sqlComandoSelect.ExecuteReader();
+
+                    //Si existe
+                    if (sqlDatos.Read())
+                    {
+                        string PassEncrypt = sqlDatos["password"].ToString();
+                        string PassDecrypt = aES.OpenSSLDecrypt(PassEncrypt);
+
+                        //Comprobar contraseña
+                        if (PassDecrypt == new_user.password)
+                        {
+                            var response = GetUserToken(new_user.username, new_user.password, new_user.scope);
+                            //CallApi(response);
+
+                            sqlConexion.Close();
+
+                            //Guarda el token
+                            sqlConsulta = "UPDATE ClientesABC SET token = @token WHERE RFC = @rfc";
+
+                            sqlConexion.Open();
+                            SqlCommand sqlComandoInsert = new SqlCommand(sqlConsulta, sqlConexion);
+
+                            sqlComandoInsert.Parameters.AddWithValue("@token", response.AccessToken.ToString());
+                            sqlComandoInsert.Parameters.AddWithValue("@RFC", new_user.username.ToUpper());
+                            
+                            sqlComandoInsert.ExecuteNonQuery();
+                            //#end Guardar
+                            sqlConexion.Close();
+                            return Json(new
+                            {
+                                access_token = response.AccessToken.ToString(),
+                                expires_in = response.ExpiresIn.ToString(),
+                                token_type = response.TokenType.ToString()
+                            }) ;
+                        }
+                        else
+                        {
+                            return Json(new
+                            {
+                                message = "Password incorrecto"
+                            });
+                        }
+                    }
+                    // Sino existe
+                    else
+                    {
+                        sqlConexion.Close();
+                        return Json(new
+                        {
+                            message = "Username no encontrado"
+                        });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new
+                {
+                    message = ex.Message
+                });
+            }
+        }
+
+        static TokenResponse GetUserToken(String Username, String Password, String Scope)
+        {
+            String WebApi = ConfigurationManager.ConnectionStrings["WebApi"].ConnectionString + "/connect/token";
+            var client = new TokenClient(
+                WebApi,
+                "ABCLeasingMobile",
+                "896C0C47-AB29-5E3A-A5B6-290F28703F7F");
+
+            return client.RequestResourceOwnerPasswordAsync(Username, Password, Scope).Result;
+        }
+        static void CallApi(TokenResponse response)
+        {
+            String WebApi = ConfigurationManager.ConnectionStrings["WebApi"].ConnectionString;
+            var client = new HttpClient();
+            client.SetBearerToken(response.AccessToken);
+
+            var Respuesta = client.GetStringAsync("http://localhost:59655/api/Values").Result;
+            Console.WriteLine(Respuesta);
         }
     }
     public class Cliente

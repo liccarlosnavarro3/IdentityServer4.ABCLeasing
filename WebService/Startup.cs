@@ -43,7 +43,8 @@ namespace WebService
                 Authority = ConfigurationManager.ConnectionStrings["WebApi"].ConnectionString,
                 ValidationMode = ValidationMode.ValidationEndpoint,
                 RequiredScopes = new[] {
-                    "ABCLeasingAPIMobile" },
+                    "ABCLeasingAPIMobile"
+                },
                     //"ABCLeasingAPI" },
             });
             //config.Filters.Add(new AuthorizeAttribute());

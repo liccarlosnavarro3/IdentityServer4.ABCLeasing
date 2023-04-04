@@ -21,4 +21,12 @@ namespace WebService.Models
         public string telefonos { get; set; }  
         public string email { get; set; }
     }
+
+    public class ClientABC
+    {
+        public string grant_type { get; set; }
+        public string username { get; set; }
+        public string password { get; set; }
+        public string scope { get; set; }
+    }
 }
